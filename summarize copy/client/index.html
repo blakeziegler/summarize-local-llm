@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script>
+    window.context_txt = `Zahir al-Din Muhammad Babur ...`; 
+    window.question_txt = `Summarize the Mughal Empire's founding in your own words.`;
+  </script>
+  <script src="plugin-summarize.js"></script>
+  <script src="https://unpkg.com/jspsych@7.3.4"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
+  <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" />
+  <script src="plugin-summarize.js"></script>
+  <link rel="stylesheet" href="plugin-summarize.css" />
+</head>
+<body></body>
+<script>
+
+  // initialize jspsych
+  const jsPsych = initJsPsych();
+  const preload = {
+    type: jsPsychPreload,
+    images: []
+  };
+
+  const context_txt = `Zahir al-Din Muhammad Babur had always dreamed of founding a great empire... (truncated for brevity)`;
+  const question_txt = `Summarize the Mughal Empire's founding in your own words.`
+
+  // prompts
+  const mughal_text = {
+    type: jsPsychSummarizeText,
+    preamble: `Mughal Empire`,
+    questions: [
+      {
+        prompt: `Zahir al-Din Muhammad Babur had always dreamed of founding a great empire. His father, the ruler of a small central Asian state named Fergana in what is now Uzbekistan, was a descendant of the famous conqueror Timur. His mother came from the family of the Mongol leader Chinggis Khan. In 1494, at the age of eleven, Babur became ruler of Fergana following his father’s unexpected death, and he set himself the task of gaining control of all the lands that had once fallen to his illustrious ancestor Timur. In 1504, he made a bold move. Striking out across the Hindu Kush mountains accompanied only by his family and two hundred fighting men, he conquered the city of Kabul in Afghanistan. In 1526, using tactics he had learned from the Persians, with whom he had allied in the past, including the use of artillery, Babur defeated the much larger army of the Delhi Sultanate, a Muslim state in northern India, and established the Mughal (the Persian pronunciation of Mongol) Empire.`,
+        name: 'history1.1',
+        rows: 5
+      },
+      {
+        prompt: `Despite his desire to become ruler of India and his fascination with his new land, Babur did not adopt Indian culture. Although he was intrigued by the subcontinent’s animals, plants, and climate, he had little interest in its people or in the Hindu religion. He described the people of India as lacking both personal beauty and manners. He admired the land’s wealth but strove to re-create for himself and his family a taste of his homeland by designing gardens in the Persian style. He remained firmly oriented toward central Asia and maintained a post road and waystations connecting the Mughal capital of Agra to Kabul. When he died, he was interred at Agra, but to honor his wishes, his body was later taken home to Kabul for burial.`,
+        name: 'history1.2',
+        rows: 5
+      },
+    ],
+    on_finish: function(data) {
+      let all_responses = data.response.map(r => r.response).join(" ");
+      window.participant_summary = all_responses;
+    }
+  };
+
+  // API evaluation trial: calls the API using the participant's combined summary
+  const api_evaluation = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+      <h3>Context:</h3>
+      <p>${context_txt}</p>
+      <h3>Question:</h3>
+      <p>${question_txt}</p>
+      <h3>Your Combined Summary:</h3>
+      <p id="user_response">Loading...</p>
+      <h3>Evaluation:</h3>
+      <pre id="api_response">Loading...</pre>
+    `,
+    choices: ["OK"],
+    on_load: async function() {
+      // Display the participant's combined summary
+      document.getElementById("user_response").innerText = window.participant_summary || "No response collected.";
+
+      const url = "https://chat.readerbench.com/score/summary";
+      const headers = { "Content-Type": "application/json" };
+      const requestBody = {
+        context: context_txt,
+        question: question_txt,
+        student_response: window.participant_summary || ""
+      };
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Response failed: ${response.status}`);
+        }
+
+        const json = await response.json();
+        console.log("API Response:", json);
+
+        // Update the response section dynamically
+        document.getElementById("api_response").innerText = JSON.stringify(json, null, 2);
+      } catch (error) {
+        console.error(error);
+        document.getElementById("api_response").innerText =
+          "Error fetching API response. Please try again.";
+      }
+    }
+  };
+
+  // Timeline
+  const timeline = [preload, mughal_text, api_evaluation];
+
+  // Run jsPsych
+  jsPsych.run(timeline);
+</script>
+</html>
