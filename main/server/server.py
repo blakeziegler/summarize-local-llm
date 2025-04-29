@@ -22,7 +22,6 @@ class info_request(BaseModel):
     
 @app.post("/score/summary")
 async def score_summary(req: info_request):
-    # Prompt the model to output exactly the six‐field JSON object
     prompt = (
         f"Context:\n{req.context}\n\n"
         f"Question:\n{req.question}\n\n"
@@ -37,7 +36,14 @@ async def score_summary(req: info_request):
     inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
     outputs = model.generate(
         **inputs,
-        max_new_tokens=256,
+        max_new_tokens=1024,
         do_sample=False
     )
+    
+    feedback_str = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+    try:
+        feedback_json = json.loads(feedback_str)
+    except json.JSONDecodeError:
+        feedback_json = {"error": feedback_str}
+    return feedback_json
 
