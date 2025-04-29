@@ -14,3 +14,30 @@ model_version = "afdfe93"
 tokenizer = AutoTokenizer.from_pretrained(model_url, revision=model_version)
 
 model = AutoModelForSeq2SeqLM.from_pretrained(model_url, revision=model_version)
+
+class info_request(BaseModel):
+    context: str
+    question: str
+    student_response: str
+    
+@app.post("/score/summary")
+async def score_summary(req: info_request):
+    # Prompt the model to output exactly the six‐field JSON object
+    prompt = (
+        f"Context:\n{req.context}\n\n"
+        f"Question:\n{req.question}\n\n"
+        f"Student’s answer:\n{req.student_response}\n\n"
+        "Please provide your evaluation as a JSON object with exactly these keys:\n"
+        "  \"Cohesion\", \"Details\", \"Language beyond source text\",\n"
+        "  \"Main Idea\", \"Objective language\", \"Wording\"\n"
+        "Each value should be one of: \"Excellent\", \"Good\", \"Fair\", \"Poor\", or \"Very Poor\".\n"
+        "Do not include any extra text or keys—output only valid JSON."
+    )
+
+    inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=256,
+        do_sample=False
+    )
+
