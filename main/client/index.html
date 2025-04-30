@@ -16,6 +16,7 @@
 <body></body>
 <script>
 
+  const SUMMARY_API_URL = window.SUMMARY_API_URL || "http://localhost:8000/score/summary";
   // initialize jspsych
   const jsPsych = initJsPsych();
   const preload = {
@@ -43,8 +44,7 @@
       },
     ],
     on_finish: function(data) {
-      let all_responses = data.response.map(r => r.response).join(" ");
-      window.participant_summary = all_responses;
+      window.participant_summary = data.response.map(r => r.response).join(" ");
     }
   };
 
@@ -63,22 +63,18 @@
     `,
     choices: ["OK"],
     on_load: async function() {
-      // Display the participant's combined summary
-      document.getElementById("user_response").innerText = window.participant_summary || "No response collected.";
-
-      const url = "https://chat.readerbench.com/score/summary";
-      const headers = { "Content-Type": "application/json" };
-      const requestBody = {
-        context: context_txt,
-        question: question_txt,
-        student_response: window.participant_summary || ""
-      };
+      document.getElementById("user_response").innerText =
+        window.participant_summary || "No response collected.";
 
       try {
-        const response = await fetch(url, {
+        const response = await fetch(SUMMARY_API_URL, {
           method: "POST",
-          headers: headers,
-          body: JSON.stringify(requestBody),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            context: context_txt,
+            question: question_txt,
+            student_response: window.participant_summary || ""
+          }),
         });
 
         if (!response.ok) {
@@ -87,9 +83,8 @@
 
         const json = await response.json();
         console.log("API Response:", json);
-
-        // Update the response section dynamically
-        document.getElementById("api_response").innerText = JSON.stringify(json, null, 2);
+        document.getElementById("api_response").innerText =
+          JSON.stringify(json, null, 2);
       } catch (error) {
         console.error(error);
         document.getElementById("api_response").innerText =
@@ -99,9 +94,6 @@
   };
 
   // Timeline
-  const timeline = [preload, mughal_text, api_evaluation];
-
-  // Run jsPsych
-  jsPsych.run(timeline);
+  jsPsych.run([preload, mughal_text, api_evaluation]);
 </script>
 </html>
