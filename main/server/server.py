@@ -3,6 +3,13 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import json
+import time
+import logging
+logging.basicConfig(
+    level    = logging.INFO,
+    format   = "%(asctime)s %(levelname)s %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -24,6 +31,10 @@ class info_request(BaseModel):
     context: str
     question: str
     student_response: str
+
+@app.get("/")
+def root():
+    return {"message": "FastAPI is alive"}
     
 @app.post("/score/summary")
 async def score_summary(req: info_request):
@@ -32,7 +43,7 @@ async def score_summary(req: info_request):
         f"Context:\n{req.context}\n\n"
         f"Question:\n{req.question}\n\n"
         f"Student’s answer:\n{req.student_response}\n\n"
-        "Please provide your evaluation as a JSON object with exactly these keys:\n"
+        "Please provide your evaluation as a JSON object with EXACTLY these keys:\n"
         "  \"Cohesion\", \"Details\", \"Language beyond source text\",\n"
         "  \"Main Idea\", \"Objective language\", \"Wording\"\n"
         "Each value should be one of: \"Excellent\", \"Good\", \"Fair\", \"Poor\", or \"Very Poor\".\n"
@@ -45,12 +56,17 @@ async def score_summary(req: info_request):
     input_len = inputs["input_ids"].shape[1]
 
     # 3) Generate without forcing eos, so we get actual new tokens
+    logging.info("Generating")
+    start = time.time()
     outputs = model.generate(
         **inputs,
-        max_new_tokens=64,
-        do_sample=True,
-        # (remove eos_token_id/pad_token_id overrides)
+        max_new_tokens=256,
+        do_sample=False,
+        pad_token_id=tokenizer.pad_token_id,
+        eos_token_id=tokenizer.eos_token_id,
+        
     )
+    logging.info(f"Generation Completed in {time.time() - start:.2f}s")
 
     # 4) Slice off only the newly generated tokens
     gen_ids   = outputs[0][input_len:]
@@ -59,6 +75,8 @@ async def score_summary(req: info_request):
     # Fallback: if empty, decode everything (for debugging)
     if not feedback_str:
         feedback_str = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    
+    print("Model Output:\n", feedback_str)
 
     # 5) Now parse JSON from the very first { … }
     start = feedback_str.find("{")
@@ -68,9 +86,10 @@ async def score_summary(req: info_request):
     try:
         feedback_json = json.loads(candidate)
     except json.JSONDecodeError:
-        feedback_json = {
-            "error": "failed to parse JSON",
-            "model_output": feedback_str
+        return {
+            "error":         "failed to parse JSON",
+            "raw_output":    feedback_str,
+            "json_candidate": candidate,
         }
 
     return feedback_json
