@@ -2,16 +2,16 @@
 <html>
 <head>
   <script>
-    window.context_txt = `Zahir al-Din Muhammad Babur ...`; 
+    window.context_txt =  mughal_text.questions[0].prompt; 
     window.question_txt = `Summarize the Mughal Empire's founding in your own words.`;
   </script>
-  <script src="plugin-summarize.js"></script>
+  <script src="static/plugin-summarize.js"></script>
   <script src="https://unpkg.com/jspsych@7.3.4"></script>
   <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
   <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
   <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" />
-  <script src="plugin-summarize.js"></script>
-  <link rel="stylesheet" href="plugin-summarize.css" />
+  <script src="static/plugin-summarize.js"></script>
+  <link rel="stylesheet" href="static/plugin-summarize.css" />
 </head>
 <body></body>
 <script>
@@ -37,16 +37,14 @@
         name: 'history1.1',
         rows: 5
       },
-      {
-        prompt: `Despite his desire to become ruler of India and his fascination with his new land, Babur did not adopt Indian culture. Although he was intrigued by the subcontinent’s animals, plants, and climate, he had little interest in its people or in the Hindu religion. He described the people of India as lacking both personal beauty and manners. He admired the land’s wealth but strove to re-create for himself and his family a taste of his homeland by designing gardens in the Persian style. He remained firmly oriented toward central Asia and maintained a post road and waystations connecting the Mughal capital of Agra to Kabul. When he died, he was interred at Agra, but to honor his wishes, his body was later taken home to Kabul for burial.`,
-        name: 'history1.2',
-        rows: 5
-      },
+
     ],
     on_finish: function(data) {
       window.participant_summary = data.response.map(r => r.response).join(" ");
     }
   };
+
+  promptText = mughal_text.questions[0].prompt
 
   // API evaluation trial: calls the API using the participant's combined summary
   const api_evaluation = {
@@ -71,8 +69,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            context: context_txt,
-            question: question_txt,
+            context: promptText,
             student_response: window.participant_summary || ""
           }),
         });

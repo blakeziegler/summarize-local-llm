@@ -144,6 +144,8 @@ async function checkIt(q) {
     document.getElementById(`input-${q}`).disabled = true;
     document.getElementById(`submit-${q}`).disabled = true;
 
+    const promptText = document.querySelector(`#jspsych-summarize-text-${q} p`).innerText.trim()
+
     // call the local scoring API
     const apiDiv = document.getElementById(`api-result-${q}`);
     try {
@@ -151,7 +153,7 @@ async function checkIt(q) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                context: window.context_txt,
+                context: promptText,
                 question: window.question_txt,
                 student_response: response
             })

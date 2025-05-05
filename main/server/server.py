@@ -1,8 +1,11 @@
 import logging
 import time
+import os
 import torch
 import language_tool_python
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from transformers import pipeline, AutoModelForSeq2SeqLM, AutoTokenizer
@@ -17,6 +20,20 @@ logger = logging.getLogger(__name__)
 
 # ——— FastAPI and CORS setup ———
 app = FastAPI()
+
+# 1) Serve index.html at “/”
+client_dir = "/Users/blakeziegler/tech/Change-Lab/local-llm/main/client"
+@app.get("/", response_class=FileResponse)
+async def serve_index():
+    return os.path.join(client_dir, "index.html")
+
+# 2) Mount everything in ./client (CSS, JS, etc.) under /static
+app.mount(
+    "/static",
+    StaticFiles(directory=client_dir),
+    name="static",
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -78,10 +95,6 @@ class InfoRequest(BaseModel):
     context: str
     student_response: str
 
-# Fast API checker
-@app.get("/")
-def root():
-    return {"message": "FastAPI is alive"}
 
 # Post request for scoring endpoint
 @app.post("/score/summary")
@@ -126,7 +139,6 @@ async def score_summary(req: InfoRequest):
     2. util.cos_sim(emb_ctx, emb_pred).item()
     computes the cosine sim between the student summary and the text.
 
-    3. 
     '''
     emb_ctx = embedder.encode(passage, convert_to_tensor=True)
     ctx_cos = util.cos_sim(emb_ctx, emb_pred).item()
