@@ -18,7 +18,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ——— FastAPI and CORS setup ———
 app = FastAPI()
 
 # 1) Serve index.html at “/”
@@ -27,7 +26,7 @@ client_dir = "/Users/blakeziegler/tech/Change-Lab/local-llm/main/client"
 async def serve_index():
     return os.path.join(client_dir, "index.html")
 
-# 2) Mount everything in ./client (CSS, JS, etc.) under /static
+# Mount to static
 app.mount(
     "/static",
     StaticFiles(directory=client_dir),
